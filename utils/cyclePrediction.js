@@ -42,7 +42,9 @@ const normalizeCycleCandidates = cycles => {
 
 exports.calculatePeriodLength = (periodStart, periodEnd) => {
   if (!periodStart || !periodEnd) return 0
-  return daysBetween(periodStart, periodEnd)
+
+  // The user-entered period dates are inclusive, so a period from Sep 18 to Sep 22 lasts 5 days.
+  return daysBetween(periodStart, periodEnd) + 1
 }
 
 exports.calculateCycleLength = (currentPeriodStart, previousPeriodStart) => {
