@@ -15,6 +15,10 @@ const cycleSchema = new mongoose.Schema(
       type: Date,
       required: true
     },
+    periodLength: {
+      type: Number,
+      default: null
+    },
     cycleLength: {
       type: Number,
       required: true
@@ -26,11 +30,11 @@ const cycleSchema = new mongoose.Schema(
       type: String
     },
     ovulationDate: {
-         type: Date
+      type: Date
     },
     fertileWindow: {
-        start: Date,
-        end: Date
+      start: Date,
+      end: Date
     }
   },
   { timestamps: true }

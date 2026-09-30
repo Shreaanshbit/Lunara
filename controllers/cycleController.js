@@ -1,7 +1,9 @@
 const Cycle = require('../models/Cycle')
 const {
+  calculatePeriodLength,
   calculateCycleLength,
-  calculateAverageCycle,
+  calculateAverageCycleLength,
+  calculateCycleLengths,
   predictNextPeriod,
   calculateOvulationDate,
   getFertileWindow,
@@ -16,26 +18,40 @@ exports.addCycle = async (req, res, next) => {
     const start = new Date(periodStart)
     const end = new Date(periodEnd)
 
-    const cycleLength = calculateCycleLength(start, end)
+    const periodLength = calculatePeriodLength(start, end)
 
     const previousCycles = await Cycle.find({ user: req.user._id }).sort({
       periodStart: 1
     })
 
-    const avgCycleLength = calculateAverageCycle([
-      ...previousCycles,
-      { cycleLength }
-    ])
+    const mostRecentPreviousStart = previousCycles.length
+      ? previousCycles[previousCycles.length - 1].periodStart
+      : null
+
+    const currentCycleLengthFromPrevious = mostRecentPreviousStart
+      ? calculateCycleLength(start, mostRecentPreviousStart)
+      : null
+
+    const validHistoricalLengths = calculateCycleLengths(previousCycles, start)
+    const avgCycleLength = calculateAverageCycleLength(validHistoricalLengths, 28)
+
+    const cycleLength =
+      currentCycleLengthFromPrevious &&
+      currentCycleLengthFromPrevious >= 21 &&
+      currentCycleLengthFromPrevious <= 45
+        ? currentCycleLengthFromPrevious
+        : avgCycleLength
 
     const predictedNextPeriod = predictNextPeriod(start, avgCycleLength)
     const ovulationDate = calculateOvulationDate(predictedNextPeriod)
     const fertileWindow = getFertileWindow(ovulationDate)
-    const phase = getCyclePhase(start, avgCycleLength)
+    const phase = getCyclePhase(start, predictedNextPeriod, ovulationDate, new Date())
 
     const cycle = await Cycle.create({
       user: req.user._id,
       periodStart: start,
       periodEnd: end,
+      periodLength,
       cycleLength,
       predictedNextPeriod,
       phase,
@@ -75,16 +91,28 @@ exports.getCurrentCycleInsight = async (req, res, next) => {
     }
 
     const latest = cycles[0]
-    const avgCycleLength = calculateAverageCycle(cycles)
-    const phase = getCyclePhase(latest.periodStart, avgCycleLength)
-    const ovulationDate = calculateOvulationDate(latest.predictedNextPeriod)
-    const fertileWindow = getFertileWindow(ovulationDate)
+    const avgCycleLength = calculateAverageCycleLength(
+      calculateCycleLengths(cycles),
+      28
+    )
+    const predictedNextPeriod =
+      latest.predictedNextPeriod || predictNextPeriod(latest.periodStart, avgCycleLength)
+    const ovulationDate =
+      latest.ovulationDate || calculateOvulationDate(predictedNextPeriod)
+    const fertileWindow =
+      latest.fertileWindow || getFertileWindow(ovulationDate)
+    const phase = getCyclePhase(
+      latest.periodStart,
+      predictedNextPeriod,
+      ovulationDate,
+      new Date()
+    )
     const confidence = getPredictionConfidence(cycles)
 
     res.json({
       success: true,
       currentPhase: phase,
-      predictedNextPeriod: latest.predictedNextPeriod,
+      predictedNextPeriod,
       fertileWindow,
       confidence
     })
@@ -103,10 +131,20 @@ exports.getCurrentCyclePhase = async (req, res, next) => {
       return res.json({ success: true, phase: null })
     }
 
-    const avgCycleLength = calculateAverageCycle(cycles)
-    const phase = getCyclePhase(cycles[0].periodStart, avgCycleLength)
+    const latest = cycles[0]
+    const avgCycleLength = calculateAverageCycleLength(
+      calculateCycleLengths(cycles),
+      28
+    )
+    const predictedNextPeriod =
+      latest.predictedNextPeriod || predictNextPeriod(latest.periodStart, avgCycleLength)
+    const ovulationDate =
+      latest.ovulationDate || calculateOvulationDate(predictedNextPeriod)
 
-    res.json({ success: true, phase })
+    res.json({
+      success: true,
+      phase: getCyclePhase(latest.periodStart, predictedNextPeriod, ovulationDate, new Date())
+    })
   } catch (err) {
     next(err)
   }
