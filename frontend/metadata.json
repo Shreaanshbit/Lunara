@@ -1,0 +1,6 @@
+{
+  "name": "Lunara - Menstrual & Wellbeing Sanctuary",
+  "description": "An empathetic, scholarly, and private sanctuary for cycle literacy, hormonal tracking, and mindful emotional restoration with conversational intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
