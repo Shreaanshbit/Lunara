@@ -43,7 +43,13 @@ exports.getCycleSymptomInsightsInternal = async userId => {
         (phaseData.moods[log.mood] || 0) + 1
     }
 
-    log.symptoms.forEach(s => {
+    const symptoms = log.name
+      ? [log.name]
+      : Array.isArray(log.symptoms)
+      ? log.symptoms
+      : []
+
+    symptoms.forEach(s => {
       phaseData.symptoms[s] =
         (phaseData.symptoms[s] || 0) + 1
     })

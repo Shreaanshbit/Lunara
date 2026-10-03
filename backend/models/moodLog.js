@@ -13,17 +13,27 @@ const moodLogSchema = new mongoose.Schema(
     },
     stressLevel: {
       type: Number,
-      min: 1,
+      min: 0,
       max: 10
     },
     anxietyLevel: {
       type: Number,
-      min: 1,
+      min: 0,
       max: 10
     },
     energyLevel: {
       type: Number,
-      min: 1,
+      min: 0,
+      max: 10
+    },
+    creativeInception: {
+      type: Number,
+      min: 0,
+      max: 10
+    },
+    somaticTension: {
+      type: Number,
+      min: 0,
       max: 10
     },
     notes: {

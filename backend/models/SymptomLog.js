@@ -7,8 +7,24 @@ const symptomLogSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    name: {
+      type: String,
+      trim: true
+    },
+    category: {
+      type: String,
+      enum: ['physical', 'digestive', 'cervical', 'cognitive']
+    },
+    severity: {
+      type: Number,
+      min: 1,
+      max: 10
+    },
     mood: String,
-    symptoms: [String],
+    symptoms: {
+      type: [String],
+      default: undefined
+    },
     intensity: {
       type: Number,
       min: 1,

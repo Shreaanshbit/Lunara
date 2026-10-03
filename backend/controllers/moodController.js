@@ -2,12 +2,19 @@ const MoodLog = require('../models/moodLog')
 
 exports.createMoodLog = async (req, res, next) => {
   try {
+    const mood = req.body.primaryMood ?? req.body.mood
+    if (!mood) {
+      return res.status(400).json({ message: 'Mood is required' })
+    }
+
     const log = await MoodLog.create({
       user: req.user._id,
-      mood: req.body.mood,
-      stressLevel: req.body.stressLevel,
-      anxietyLevel: req.body.anxietyLevel,
-      energyLevel: req.body.energyLevel,
+      mood,
+      stressLevel: req.body.stressLevel ?? req.body.stress ?? req.body.somaticTension,
+      anxietyLevel: req.body.anxietyLevel ?? req.body.anxiety,
+      energyLevel: req.body.energyLevel ?? req.body.energy,
+      creativeInception: req.body.creativeInception,
+      somaticTension: req.body.somaticTension,
       notes: req.body.notes
     })
 
