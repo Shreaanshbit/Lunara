@@ -15,7 +15,7 @@ import { InsightsView } from './views/InsightsView';
 import { MoodView } from './views/MoodView';
 import { SymptomsView } from './views/SymptomsView';
 import { ProfileSettingsView } from './views/ProfileSettingsView';
-import { LandingView } from './views/LandingView';
+import { LandingPage } from './views/LandingPage';
 import { LoginView } from './views/LoginView';
 import { SignUpView } from './views/SignUpView';
 import { LogMoodModal } from './components/modals/LogMoodModal';
@@ -24,7 +24,7 @@ import { PeriodStartedModal } from './components/modals/PeriodStartedModal';
 import { DownloadModal } from './components/modals/DownloadModal';
 
 export default function App() {
-  const [currentPath, setCurrentPath] = useState<NavPath>('dashboard');
+  const [currentPath, setCurrentPath] = useState<NavPath>('landing');
   const [currentMood, setCurrentMood] = useState<MoodLog>(INITIAL_MOOD);
   const [symptoms, setSymptoms] = useState<SymptomLog[]>(INITIAL_SYMPTOMS);
 
@@ -57,14 +57,7 @@ export default function App() {
   if (currentPath === 'landing') {
     return (
       <>
-        <LandingView 
-          onNavigate={setCurrentPath} 
-          onOpenDownload={() => setIsDownloadOpen(true)}
-        />
-        <DownloadModal
-          isOpen={isDownloadOpen}
-          onClose={() => setIsDownloadOpen(false)}
-        />
+        <LandingPage onNavigate={setCurrentPath} />
       </>
     );
   }
