@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowUpRight } from 'lucide-react';
 import { NavPath } from '../types';
 import { IMAGES } from '../data/mockData';
 import './LandingPage.css';
@@ -84,7 +85,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const [dir, setDir] = useState<'next' | 'prev'>('next');
   const [playing, setPlaying] = useState(true);
   const [hovering, setHovering] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const touchX = useRef<number | null>(null);
   const reduced = useRef(false);
@@ -121,23 +121,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
   const f = features[active];
   const running = playing && !hovering;
-  const closeMenu = () => setMenuOpen(false);
-
   return (
     <div className="lp" id="top">
       <header className={`lp-nav${scrolled ? ' lp-nav--solid' : ''}`}>
         <div className="lp-nav__inner">
-          <a className="lp-brand" href="#top" aria-label="Lunara home" onClick={closeMenu}>
-            <img src={IMAGES.emblem} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} /><span>Lunara</span>
-          </a>
-          <nav className={`lp-links${menuOpen ? ' is-open' : ''}`} aria-label="Main navigation">
-            <a href="#rhythm" onClick={closeMenu}>The rhythm</a>
-            <a href="#features" onClick={closeMenu}>Features</a>
-          </nav>
-          <div className="lp-nav__actions">
+          <div className="lp-auth-pill" aria-label="Account navigation">
             <button className="lp-login" onClick={() => onNavigate('login')}>Log in</button>
-            <button className="lp-btn lp-btn--sm" onClick={() => onNavigate('signup')}>Sign up</button>
-            <button className="lp-burger" type="button" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}><span /><span /></button>
+            <button className="lp-signup" onClick={() => onNavigate('signup')}>
+              <span>Sign up</span><ArrowUpRight aria-hidden="true" size={17} strokeWidth={2} />
+            </button>
           </div>
         </div>
       </header>
