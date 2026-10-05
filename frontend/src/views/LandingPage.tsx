@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NavPath } from '../types';
 import { IMAGES } from '../data/mockData';
 import './LandingPage.css';
@@ -8,257 +7,248 @@ interface LandingPageProps {
   onNavigate: (path: NavPath) => void;
 }
 
+const AUTOPLAY_MS = 6500;
+
 const features = [
-  {
-    id: 'cycle',
-    name: 'Cycle',
-    eyebrow: 'Know your rhythm',
-    title: 'Your cycle, in context.',
-    description: 'Keep period dates and cycle notes together, so it is easier to see where you are and what may be coming next.',
-  },
-  {
-    id: 'mood',
-    name: 'Mood',
-    eyebrow: 'Check in with yourself',
-    title: 'Make space for how you feel.',
-    description: 'Record your mood, energy, stress, and notes in a check-in that leaves room for more than one feeling.',
-  },
-  {
-    id: 'symptoms',
-    name: 'Symptoms',
-    eyebrow: 'Notice what your body says',
-    title: 'Keep the details that matter.',
-    description: 'Log bodily cues with a category and intensity, then look back at your own notes over time.',
-  },
-  {
-    id: 'insights',
-    name: 'Insights',
-    eyebrow: 'See the bigger picture',
-    title: 'Your notes, brought together.',
-    description: 'Review cycle and symptom patterns as your journal grows. Your history remains the starting point.',
-  },
-  {
-    id: 'lunara-ai',
-    name: 'Lunara AI',
-    eyebrow: 'A companion for questions',
-    title: 'Talk it through, gently.',
-    description: 'Ask questions about your cycle and wellbeing, with responses designed to support reflection rather than diagnosis.',
-  },
+  { id: 'cycle', name: 'Cycle', eyebrow: 'Know your rhythm', title: 'Your cycle, in context.', description: 'Keep period dates and cycle notes together, so it is easier to see where you are and what may be coming next.' },
+  { id: 'mood', name: 'Mood', eyebrow: 'Check in with yourself', title: 'Make space for how you feel.', description: 'Record mood, energy, stress, and notes in a check-in that leaves room for more than one feeling.' },
+  { id: 'symptoms', name: 'Symptoms', eyebrow: 'Notice what your body says', title: 'Keep the details that matter.', description: 'Log bodily cues with a category and intensity, then look back at your own notes over time.' },
+  { id: 'insights', name: 'Insights', eyebrow: 'See the bigger picture', title: 'Your notes, brought together.', description: 'Review cycle and symptom patterns as your journal grows. Your history stays the starting point.' },
+  { id: 'lunara-ai', name: 'Lunara AI', eyebrow: 'A companion for questions', title: 'Talk it through, gently.', description: 'Ask about your cycle and wellbeing. Replies support reflection, never diagnosis.' },
 ];
 
+const Preview: React.FC<{ id: string }> = ({ id }) => {
+  switch (id) {
+    case 'cycle':
+      return (
+        <>
+          <p className="pv-label">Your cycle</p>
+          <div className="pv-ring" role="img" aria-label="Day 18 of cycle, luteal phase">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" className="pv-ring__bg" />
+              <circle cx="60" cy="60" r="52" className="pv-ring__fg" />
+            </svg>
+            <div><strong>18</strong><span>Day</span></div>
+          </div>
+          <div className="pv-phases"><span>Period</span><span>Follicular</span><span>Ovulatory</span><span className="is-on">Luteal</span></div>
+          <div className="pv-row"><span>Next period</span><strong>About 9 days</strong></div>
+        </>
+      );
+    case 'mood':
+      return (
+        <>
+          <p className="pv-label">Today’s check-in</p>
+          <h4 className="pv-title">How are you feeling?</h4>
+          <div className="pv-chips"><span>Calm</span><span className="is-on">Okay</span><span>Tender</span><span>Restless</span></div>
+          {[['Energy', 60], ['Stress', 30]].map(([l, v]) => (
+            <div className="pv-meter" key={l}><div><span>{l}</span><strong>{Number(v) / 10} / 10</strong></div><i><b style={{ width: `${v}%` }} /></i></div>
+          ))}
+        </>
+      );
+    case 'symptoms':
+      return (
+        <>
+          <p className="pv-label">Symptom journal</p>
+          <h4 className="pv-title">Today’s notes</h4>
+          {[['Fatigue', 'Physical · Mild', 4, 'rose'], ['Bloating', 'Digestive · Moderate', 6, 'green'], ['Headache', 'Physical · Mild', 3, 'purple']].map(([n, c, s, t]) => (
+            <div className="pv-symptom" key={n}><span className={`pv-dot pv-dot--${t}`} /><div><strong>{n}</strong><small>{c}</small></div><b>{s}/10</b></div>
+          ))}
+        </>
+      );
+    case 'insights':
+      return (
+        <>
+          <p className="pv-label">Your journal, over time</p>
+          <h4 className="pv-title">Notice your patterns.</h4>
+          <div className="pv-chart" aria-hidden="true">
+            {[32, 45, 38, 66, 54, 78, 59, 88].map((h, i) => <span key={i} style={{ height: `${h}%`, animationDelay: `${i * 60}ms` }} />)}
+          </div>
+          <div className="pv-row"><span>Energy notes</span><em>Sample view</em></div>
+          <p className="pv-note">Insights grow more useful with every check-in you add.</p>
+        </>
+      );
+    default:
+      return (
+        <>
+          <p className="pv-label">A conversation with Lunara</p>
+          <div className="pv-chat pv-chat--user">Why have I been feeling tired lately?</div>
+          <div className="pv-chat pv-chat--ai">You’ve noted fatigue in this phase across a few recent cycles. Want to look at those entries together?</div>
+          <div className="pv-input">Ask about your cycle or wellbeing <span>↑</span></div>
+        </>
+      );
+  }
+};
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
-  const [activeFeature, setActiveFeature] = useState(0);
+  const [active, setActive] = useState(0);
+  const [dir, setDir] = useState<'next' | 'prev'>('next');
+  const [playing, setPlaying] = useState(true);
+  const [hovering, setHovering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const touchX = useRef<number | null>(null);
+  const reduced = useRef(false);
+
+  const go = useCallback((i: number, d?: 'next' | 'prev') => {
+    const n = (i + features.length) % features.length;
+    setDir(d ?? (n >= active ? 'next' : 'prev'));
+    setActive(n);
+  }, [active]);
 
   useEffect(() => {
-    const elements = document.querySelectorAll<HTMLElement>('[data-reveal]');
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            (entry.target as HTMLElement).dataset.revealed = 'true';
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12 },
-    );
-
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+    reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced.current) setPlaying(false);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { (e.target as HTMLElement).dataset.revealed = 'true'; io.unobserve(e.target); }
+    }), { threshold: 0.12 });
+    document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((el) => io.observe(el));
+    return () => { window.removeEventListener('scroll', onScroll); io.disconnect(); };
   }, []);
 
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(active + 1, 'next'); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(active - 1, 'prev'); }
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) > 44) go(active + (dx < 0 ? 1 : -1), dx < 0 ? 'next' : 'prev');
+  };
+
+  const f = features[active];
+  const running = playing && !hovering;
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="landing-page" id="top">
-      <header className="landing-nav">
-        <div className="landing-nav__inner">
-          <a className="landing-brand" href="#top" aria-label="Lunara home" onClick={closeMenu}>
-            <img src={IMAGES.emblem} alt="" />
-            <span>Lunara</span>
+    <div className="lp" id="top">
+      <header className={`lp-nav${scrolled ? ' lp-nav--solid' : ''}`}>
+        <div className="lp-nav__inner">
+          <a className="lp-brand" href="#top" aria-label="Lunara home" onClick={closeMenu}>
+            <img src={IMAGES.emblem} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} /><span>Lunara</span>
           </a>
-
-          <nav className={`landing-links${menuOpen ? ' landing-links--open' : ''}`} aria-label="Main navigation">
+          <nav className={`lp-links${menuOpen ? ' is-open' : ''}`} aria-label="Main navigation">
             <a href="#rhythm" onClick={closeMenu}>The rhythm</a>
             <a href="#features" onClick={closeMenu}>Features</a>
-            <a href="#your-space" onClick={closeMenu}>Your space</a>
           </nav>
-
-          <div className="landing-nav__actions">
-            <button className="landing-login" onClick={() => onNavigate('login')}>Log in</button>
-            <button className="landing-signup" onClick={() => onNavigate('signup')}>Sign up</button>
-            <button
-              className="landing-menu-toggle"
-              type="button"
-              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <span />
-              <span />
-            </button>
+          <div className="lp-nav__actions">
+            <button className="lp-login" onClick={() => onNavigate('login')}>Log in</button>
+            <button className="lp-btn lp-btn--sm" onClick={() => onNavigate('signup')}>Sign up</button>
+            <button className="lp-burger" type="button" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}><span /><span /></button>
           </div>
         </div>
       </header>
 
       <main>
-        <section className="landing-hero" aria-labelledby="landing-title">
-          <img className="landing-hero__image" src={IMAGES.landingHero} alt="Sunlit tea and botanicals in a quiet morning space" />
-          <div className="landing-hero__shade" />
-          <div className="landing-hero__content">
-            <p className="landing-eyebrow landing-eyebrow--light">A cycle journal, on your terms</p>
-            <h1 id="landing-title">Every cycle<br />has a rhythm.</h1>
-            <p className="landing-hero__copy"><em>Understand yours.</em></p>
-            <p className="landing-hero__description">Lunara helps you track your cycle, mood, and symptoms, then notice patterns that are uniquely yours.</p>
-            <div className="landing-hero__actions">
-              <button className="landing-button landing-button--light" onClick={() => onNavigate('signup')}>
-                Get started <span aria-hidden="true">↗</span>
-              </button>
-              <a className="landing-text-link" href="#rhythm">Explore the rhythm <span aria-hidden="true">↓</span></a>
+        <section className="lp-hero" aria-labelledby="lp-title">
+          <div className="lp-hero__text">
+            <p className="lp-kicker">A cycle journal, on your terms</p>
+            <h1 id="lp-title">Every cycle has a rhythm. <em>Learn yours.</em></h1>
+            <p className="lp-lede">Track your cycle, mood, and symptoms in one calm place, then notice the patterns that are uniquely yours.</p>
+            <div className="lp-actions">
+              <button className="lp-btn" onClick={() => onNavigate('signup')}>Start your journal</button>
+              <a className="lp-link" href="#features">See how it works</a>
             </div>
+            <p className="lp-fine">Free to start. Notice without judgment.</p>
           </div>
-          <div className="landing-hero__note">
-            <span className="landing-hero__note-mark" />
-            <span>Notice without judgment.</span>
-          </div>
-          <a className="landing-scroll-cue" href="#rhythm" aria-label="Scroll to explore">
-            <span>Scroll to explore</span><span aria-hidden="true">↓</span>
-          </a>
-        </section>
 
-        <section className="landing-intro" id="rhythm">
-          <div className="landing-intro__head landing-reveal" data-reveal>
-            <p className="landing-eyebrow">A little more than dates</p>
-            <h2>Your cycle is more<br />than a date.</h2>
-          </div>
-          <div className="landing-pillars landing-reveal" data-reveal>
-            <article className="landing-pillar">
-              <span className="material-symbols-outlined" aria-hidden="true">calendar_month</span>
-              <h3>Cycle</h3>
-              <p>Know where you are and what may be coming next.</p>
-            </article>
-            <article className="landing-pillar">
-              <span className="material-symbols-outlined" aria-hidden="true">mood</span>
-              <h3>Mood</h3>
-              <p>Track how you feel throughout your cycle.</p>
-            </article>
-            <article className="landing-pillar">
-              <span className="material-symbols-outlined" aria-hidden="true">vital_signs</span>
-              <h3>Symptoms</h3>
-              <p>Notice what your body is telling you.</p>
-            </article>
-          </div>
-          <p className="landing-intro__closing">Lunara brings them together to help you see the bigger picture.</p>
-        </section>
-
-        <section className="landing-showcase" id="features" aria-labelledby="landing-showcase-title">
-          <div className="landing-showcase__heading landing-reveal" data-reveal>
-            <div>
-              <p className="landing-eyebrow">A closer look</p>
-              <h2 id="landing-showcase-title">From tracking<br />to understanding.</h2>
+          <div className="lp-hero__art">
+            <div className="lp-arch">
+              <img src={IMAGES.landingHero} alt="Sunlit tea and botanicals in a quiet morning space" />
             </div>
-            <p>Explore the parts of Lunara designed to help you notice, record, and reflect.</p>
-          </div>
-
-          <div className="landing-carousel landing-reveal" data-reveal>
-            <div className="landing-carousel__preview" aria-label={`${features[activeFeature].name} preview`}>
-              <div className="landing-preview-window">
-                <div className="landing-preview-window__top"><span /><span /><span /><small>LUNARA / {features[activeFeature].name.toUpperCase()}</small></div>
-                <div className={`landing-preview landing-preview--${features[activeFeature].id}`} key={features[activeFeature].id}>
-                  {activeFeature === 0 && (
-                    <>
-                      <div className="preview-overline">YOUR CYCLE</div>
-                      <div className="preview-cycle-heading"><strong>Day 18</strong><span>● Luteal phase</span></div>
-                      <div className="preview-cycle-track"><i /><i /><i /><i /></div>
-                      <div className="preview-cycle-dates"><span>Period</span><span>Follicular</span><span>Ovulatory</span><span>Luteal</span></div>
-                      <div className="preview-cycle-note"><span>Next period estimate</span><strong>About 9 days</strong></div>
-                    </>
-                  )}
-                  {activeFeature === 1 && (
-                    <>
-                      <div className="preview-overline">TODAY'S CHECK-IN</div>
-                      <h3 className="preview-title">How are you feeling?</h3>
-                      <div className="preview-moods"><span>Calm</span><span className="is-selected">Okay</span><span>Tender</span><span>Restless</span></div>
-                      <div className="preview-range"><span>Energy</span><strong>6 / 10</strong><i><b style={{ width: '60%' }} /></i></div>
-                      <div className="preview-range"><span>Stress</span><strong>3 / 10</strong><i><b style={{ width: '30%' }} /></i></div>
-                    </>
-                  )}
-                  {activeFeature === 2 && (
-                    <>
-                      <div className="preview-overline">SYMPTOM JOURNAL</div>
-                      <h3 className="preview-title">Today’s notes</h3>
-                      <div className="preview-symptom"><span className="preview-symptom__dot preview-symptom__dot--rose" /><div><strong>Fatigue</strong><small>Physical · Mild</small></div><b>4/10</b></div>
-                      <div className="preview-symptom"><span className="preview-symptom__dot preview-symptom__dot--green" /><div><strong>Bloating</strong><small>Digestive · Moderate</small></div><b>6/10</b></div>
-                      <div className="preview-symptom"><span className="preview-symptom__dot preview-symptom__dot--gold" /><div><strong>Headache</strong><small>Physical · Mild</small></div><b>3/10</b></div>
-                    </>
-                  )}
-                  {activeFeature === 3 && (
-                    <>
-                      <div className="preview-overline">YOUR JOURNAL, OVER TIME</div>
-                      <h3 className="preview-title">Notice your patterns.</h3>
-                      <div className="preview-chart" aria-hidden="true"><span style={{ height: '32%' }} /><span style={{ height: '45%' }} /><span style={{ height: '38%' }} /><span style={{ height: '66%' }} /><span style={{ height: '54%' }} /><span style={{ height: '78%' }} /><span style={{ height: '59%' }} /><span style={{ height: '88%' }} /></div>
-                      <div className="preview-chart-caption"><span>Energy notes</span><span>Sample view</span></div>
-                      <p className="preview-insight">Insights become more useful as you add your own check-ins.</p>
-                    </>
-                  )}
-                  {activeFeature === 4 && (
-                    <>
-                      <div className="preview-overline">A CONVERSATION WITH LUNARA</div>
-                      <div className="preview-chat preview-chat--user">Why have I been feeling tired lately?</div>
-                      <div className="preview-chat preview-chat--assistant"><span>LUNARA</span>You’ve noted fatigue during this phase in a few recent cycles. Want to look at those entries together?</div>
-                      <div className="preview-chat-input">Ask about your cycle or wellbeing <span>↑</span></div>
-                    </>
-                  )}
-                </div>
-              </div>
+            <div className="lp-float lp-float--phase" aria-hidden="true">
+              <span className="lp-float__dot" /><div><small>Today</small><strong>Day 18 · Luteal</strong></div>
             </div>
-
-            <div className="landing-carousel__details" aria-live="polite">
-              <div className="landing-carousel__counter"><span>0{activeFeature + 1}</span><i />0{features.length}</div>
-              <p className="landing-eyebrow">{features[activeFeature].eyebrow}</p>
-              <h3>{features[activeFeature].title}</h3>
-              <p className="landing-carousel__description">{features[activeFeature].description}</p>
-              <div className="landing-carousel__tabs" role="tablist" aria-label="Lunara features">
-                {features.map((feature, index) => (
-                  <button
-                    key={feature.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeFeature === index}
-                    aria-label={`Show ${feature.name} feature`}
-                    onClick={() => setActiveFeature(index)}
-                  >
-                    <span>{feature.name}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="landing-carousel__arrows">
-                <button type="button" aria-label="Previous feature" onClick={() => setActiveFeature((activeFeature + features.length - 1) % features.length)}><ArrowLeft size={18} /></button>
-                <button type="button" aria-label="Next feature" onClick={() => setActiveFeature((activeFeature + 1) % features.length)}><ArrowRight size={18} /></button>
-              </div>
+            <div className="lp-float lp-float--mood" aria-hidden="true">
+              <small>Check-in</small>
+              <div><span>Calm</span><span className="is-on">Okay</span><span>Tender</span></div>
             </div>
           </div>
         </section>
 
-        <section className="landing-closing" id="your-space">
-          <p className="landing-eyebrow landing-reveal" data-reveal>A gentle place to begin</p>
-          <h2 className="landing-reveal" data-reveal>Understand your cycle.<br /><em>Understand yourself.</em></h2>
-          <p className="landing-closing__copy landing-reveal" data-reveal>Start tracking your journey with Lunara.</p>
-          <div className="landing-closing__actions landing-reveal" data-reveal>
-            <button className="landing-button landing-button--dark" onClick={() => onNavigate('signup')}>Create your account <span aria-hidden="true">↗</span></button>
-            <button className="landing-closing__login" onClick={() => onNavigate('login')}>Already have an account? Log in</button>
+        <section className="lp-intro" id="rhythm">
+          <div className="lp-intro__head" data-reveal>
+            <h2>Your cycle is more than a date.</h2>
+            <p>Dates tell you when. Lunara helps you notice how, so each month makes a little more sense than the last.</p>
           </div>
-          <span className="landing-closing__moon" aria-hidden="true">◔</span>
+          <div className="lp-pillars" data-reveal>
+            {[['calendar_month', 'Cycle', 'Know where you are and what may be coming next.'], ['mood', 'Mood', 'Track how you feel throughout your cycle.'], ['vital_signs', 'Symptoms', 'Notice what your body is telling you.']].map(([icon, t, d]) => (
+              <article className="lp-pillar" key={t}>
+                <span className="material-symbols-outlined" aria-hidden="true">{icon}</span>
+                <h3>{t}</h3><p>{d}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="lp-showcase" id="features" aria-labelledby="lp-showcase-title">
+          <div className="lp-showcase__head" data-reveal>
+            <h2 id="lp-showcase-title">From tracking to understanding.</h2>
+            <p>Five parts of Lunara, designed to help you notice, record, and reflect.</p>
+          </div>
+
+          <div
+            className="lp-carousel"
+            data-reveal
+            onMouseEnter={() => setHovering(true)}
+            onMouseLeave={() => setHovering(false)}
+            onFocus={() => setHovering(true)}
+            onBlur={() => setHovering(false)}
+            onKeyDown={onKey}
+            onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+            onTouchEnd={onTouchEnd}
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Lunara features"
+          >
+
+            <div className="lp-stage" id="lp-stage" role="tabpanel" aria-labelledby={`tab-${f.id}`}>
+              <div className="lp-device">
+                <div className="lp-device__bar"><span /><span /><span /><small>Lunara · {f.name}</small></div>
+                <div className={`lp-preview lp-preview--${dir}`} key={f.id}><Preview id={f.id} /></div>
+              </div>
+            </div>
+
+            <div className="lp-copy" aria-live={playing ? 'off' : 'polite'}>
+              <div className="lp-copy__body" key={f.id}>
+                <p className="lp-kicker">{f.eyebrow}</p>
+                <h3>{f.title}</h3>
+                <p>{f.description}</p>
+              </div>
+            <div className="lp-tabs" role="tablist" aria-label="Choose a feature">
+              {features.map((ft, i) => (
+                <button
+                  key={ft.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${ft.id}`}
+                  aria-selected={active === i}
+                  aria-controls="lp-stage"
+                  tabIndex={active === i ? 0 : -1}
+                  className={active === i ? 'is-active' : ''}
+                  onClick={() => go(i)}
+                >
+                  <span>{ft.name}</span>
+                  <i aria-hidden="true">
+                    {active === i && (
+                      <b
+                        key={`${i}-${playing}`}
+                        className={running ? 'is-running' : 'is-paused'}
+                        style={{ animationDuration: `${AUTOPLAY_MS}ms`, animationPlayState: running ? 'running' : 'paused' }}
+                        onAnimationEnd={() => playing && go(active + 1, 'next')}
+                      />
+                    )}
+                  </i>
+                </button>
+              ))}
+            </div>
+            </div>
+          </div>
         </section>
       </main>
-
-      <footer className="landing-footer">
-        <a className="landing-brand landing-brand--footer" href="#top"><img src={IMAGES.emblem} alt="" /><span>Lunara</span></a>
-        <p>Cycle care with room for real life.</p>
-        <nav aria-label="Footer navigation"><a href="#rhythm">The rhythm</a><a href="#features">Features</a><button onClick={() => onNavigate('login')}>Log in</button></nav>
-        <span className="landing-footer__copyright">© 2026 Lunara</span>
-      </footer>
     </div>
   );
 };
