@@ -56,7 +56,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.dataset.revealed = 'true';
+            (entry.target as HTMLElement).dataset.revealed = 'true';
             observer.unobserve(entry.target);
           }
         });
