@@ -125,6 +125,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
     <div className="lp" id="top">
       <header className={`lp-nav${scrolled ? ' lp-nav--solid' : ''}`}>
         <div className="lp-nav__inner">
+          <a className="lp-brand" href="#top" aria-label="Lunara home">
+            <img className="lp-brand__mark" src="/lunara-logo.png" alt="" />
+            <img className="lp-brand__word" src="/lunara-text.png" alt="Lunara" />
+          </a>
           <div className="lp-auth-pill" aria-label="Account navigation">
             <button className="lp-login" onClick={() => onNavigate('login')}>Log in</button>
             <button className="lp-signup" onClick={() => onNavigate('signup')}>
